@@ -21,12 +21,6 @@ And install all the dependencies
 
 `composer install`
 
-#### Configuration Parameters
-
-After hitting composer install, you will be prompted to fill in your parameters.
- 
-You may add the default ones given by hitting enter (as the values are set by Docker config), except for the **mailer parameters**, please update those with your mailer provider.
-
 #### Creating the database schema
 
 Once you've installed the dependencies, you may now create a database and the schema. 
