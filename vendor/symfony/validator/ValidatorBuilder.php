@@ -38,16 +38,14 @@ use Symfony\Contracts\Translation\TranslatorTrait;
  * The default implementation of {@link ValidatorBuilderInterface}.
  *
  * @author Bernhard Schussek <bschussek@gmail.com>
- *
- * @final since Symfony 4.2
  */
 class ValidatorBuilder implements ValidatorBuilderInterface
 {
-    private $initializers = array();
-    private $loaders = array();
-    private $xmlMappings = array();
-    private $yamlMappings = array();
-    private $methodMappings = array();
+    private $initializers = [];
+    private $loaders = [];
+    private $xmlMappings = [];
+    private $yamlMappings = [];
+    private $methodMappings = [];
 
     /**
      * @var Reader|null
@@ -255,10 +253,16 @@ class ValidatorBuilder implements ValidatorBuilderInterface
 
     /**
      * {@inheritdoc}
+     *
+     * @final since Symfony 4.2
      */
     public function setTranslator(LegacyTranslatorInterface $translator)
     {
-        $this->translator = $translator instanceof LegacyTranslatorProxy ? $translator->getTranslator() : $translator;
+        $this->translator = $translator;
+
+        while ($this->translator instanceof LegacyTranslatorProxy) {
+            $this->translator = $this->translator->getTranslator();
+        }
 
         return $this;
     }
@@ -288,7 +292,7 @@ class ValidatorBuilder implements ValidatorBuilderInterface
      */
     public function getLoaders()
     {
-        $loaders = array();
+        $loaders = [];
 
         foreach ($this->xmlMappings as $xmlMapping) {
             $loaders[] = new XmlFileLoader($xmlMapping);

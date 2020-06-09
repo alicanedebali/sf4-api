@@ -5,8 +5,10 @@ namespace Lexik\Bundle\JWTAuthenticationBundle\Security\Http\Authentication;
 use Lexik\Bundle\JWTAuthenticationBundle\Event\AuthenticationSuccessEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Lexik\Bundle\JWTAuthenticationBundle\Response\JWTAuthenticationSuccessResponse;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManager;
+use Lexik\Bundle\JWTAuthenticationBundle\Security\Http\Cookie\JWTCookieProvider;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as ContractsEventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -16,27 +18,25 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationSuccessHandlerI
  * AuthenticationSuccessHandler.
  *
  * @author Dev Lexik <dev@lexik.fr>
+ * @author Robin Chalas <robin.chalas@gmail.com>
+ *
+ * @final
  */
 class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterface
 {
-    /**
-     * @var JWTManager
-     */
-    protected $jwtManager;
+    private $cookieProviders;
 
-    /**
-     * @var EventDispatcherInterface
-     */
+    protected $jwtManager;
     protected $dispatcher;
 
     /**
-     * @param JWTManager               $jwtManager
-     * @param EventDispatcherInterface $dispatcher
+     * @param iterable|JWTCookieProvider[] $cookieProviders
      */
-    public function __construct(JWTManager $jwtManager, EventDispatcherInterface $dispatcher)
+    public function __construct(JWTTokenManagerInterface $jwtManager, EventDispatcherInterface $dispatcher, $cookieProviders = [])
     {
         $this->jwtManager = $jwtManager;
         $this->dispatcher = $dispatcher;
+        $this->cookieProviders = $cookieProviders;
     }
 
     /**
@@ -53,11 +53,31 @@ class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterf
             $jwt = $this->jwtManager->create($user);
         }
 
-        $response = new JWTAuthenticationSuccessResponse($jwt);
+        $jwtCookies = [];
+        foreach ($this->cookieProviders as $cookieProvider) {
+            $jwtCookies[] = $cookieProvider->createCookie($jwt);
+        }
+
+        $response = new JWTAuthenticationSuccessResponse($jwt, [], $jwtCookies);
         $event    = new AuthenticationSuccessEvent(['token' => $jwt], $user, $response);
 
-        $this->dispatcher->dispatch(Events::AUTHENTICATION_SUCCESS, $event);
-        $response->setData($event->getData());
+        if ($this->dispatcher instanceof ContractsEventDispatcherInterface) {
+            $this->dispatcher->dispatch($event, Events::AUTHENTICATION_SUCCESS);
+        } else {
+            $this->dispatcher->dispatch(Events::AUTHENTICATION_SUCCESS, $event);
+        }
+
+        $responseData = $event->getData();
+
+        if ($jwtCookies) {
+            unset($responseData['token']);
+        }
+
+        if ($responseData) {
+            $response->setData($responseData);
+        } else {
+            $response->setStatusCode(JWTAuthenticationSuccessResponse::HTTP_NO_CONTENT);
+        }
 
         return $response;
     }

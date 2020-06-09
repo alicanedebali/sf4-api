@@ -31,8 +31,8 @@ trait PhpFilesTrait
 
     private $includeHandler;
     private $appendOnly;
-    private $values = array();
-    private $files = array();
+    private $values = [];
+    private $files = [];
 
     private static $startTime;
 
@@ -50,12 +50,15 @@ trait PhpFilesTrait
     {
         $time = time();
         $pruned = true;
+        $getExpiry = true;
 
         set_error_handler($this->includeHandler);
         try {
             foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->directory, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::LEAVES_ONLY) as $file) {
                 try {
-                    list($expiresAt) = include $file;
+                    if (\is_array($expiresAt = include $file)) {
+                        $expiresAt = $expiresAt[0];
+                    }
                 } catch (\ErrorException $e) {
                     $expiresAt = $time;
                 }
@@ -78,24 +81,30 @@ trait PhpFilesTrait
     {
         if ($this->appendOnly) {
             $now = 0;
-            $missingIds = array();
+            $missingIds = [];
         } else {
             $now = time();
             $missingIds = $ids;
-            $ids = array();
+            $ids = [];
         }
-        $values = array();
+        $values = [];
 
         begin:
+        $getExpiry = false;
+
         foreach ($ids as $id) {
             if (null === $value = $this->values[$id] ?? null) {
                 $missingIds[] = $id;
             } elseif ('N;' === $value) {
                 $values[$id] = null;
-            } elseif ($value instanceof \Closure) {
-                $values[$id] = $value();
-            } else {
+            } elseif (!\is_object($value)) {
                 $values[$id] = $value;
+            } elseif (!$value instanceof LazyValue) {
+                // calling a Closure is for @deprecated BC and should be removed in Symfony 5.0
+                $values[$id] = $value();
+            } elseif (false === $values[$id] = include $value->file) {
+                unset($values[$id], $this->values[$id]);
+                $missingIds[] = $id;
             }
             if (!$this->appendOnly) {
                 unset($this->values[$id]);
@@ -108,10 +117,18 @@ trait PhpFilesTrait
 
         set_error_handler($this->includeHandler);
         try {
+            $getExpiry = true;
+
             foreach ($missingIds as $k => $id) {
                 try {
                     $file = $this->files[$id] ?? $this->files[$id] = $this->getFile($id);
-                    list($expiresAt, $this->values[$id]) = include $file;
+
+                    if (\is_array($expiresAt = include $file)) {
+                        [$expiresAt, $this->values[$id]] = $expiresAt;
+                    } elseif ($now < $expiresAt) {
+                        $this->values[$id] = new LazyValue($file);
+                    }
+
                     if ($now >= $expiresAt) {
                         unset($this->values[$id], $missingIds[$k]);
                     }
@@ -124,7 +141,7 @@ trait PhpFilesTrait
         }
 
         $ids = $missingIds;
-        $missingIds = array();
+        $missingIds = [];
         goto begin;
     }
 
@@ -133,14 +150,20 @@ trait PhpFilesTrait
      */
     protected function doHave($id)
     {
-        if ($this->appendOnly && $this->values[$id]) {
+        if ($this->appendOnly && isset($this->values[$id])) {
             return true;
         }
 
         set_error_handler($this->includeHandler);
         try {
             $file = $this->files[$id] ?? $this->files[$id] = $this->getFile($id);
-            list($expiresAt, $value) = include $file;
+            $getExpiry = true;
+
+            if (\is_array($expiresAt = include $file)) {
+                [$expiresAt, $value] = $expiresAt;
+            } elseif ($this->appendOnly) {
+                $value = new LazyValue($file);
+            }
         } catch (\ErrorException $e) {
             return false;
         } finally {
@@ -182,20 +205,23 @@ trait PhpFilesTrait
                     $isStaticValue = false;
                 }
                 $value = var_export($value, true);
-            } elseif (!\is_scalar($value)) {
+            } elseif (!is_scalar($value)) {
                 throw new InvalidArgumentException(sprintf('Cache key "%s" has non-serializable %s value.', $key, \gettype($value)));
             } else {
                 $value = var_export($value, true);
             }
 
             if (!$isStaticValue) {
-                $value = str_replace("\n", "\n    ", $value);
-                $value = "static function () {\n\n    return {$value};\n\n}";
+                // We cannot use a closure here because of https://bugs.php.net/76982
+                $value = str_replace('\Symfony\Component\VarExporter\Internal\\', '', $value);
+                $value = "<?php\n\nnamespace Symfony\Component\VarExporter\Internal;\n\nreturn \$getExpiry ? {$expiry} : {$value};\n";
+            } else {
+                $value = "<?php return [{$expiry}, {$value}];\n";
             }
 
             $file = $this->files[$key] = $this->getFile($key, true);
             // Since OPcache only compiles files older than the script execution start, set the file's mtime in the past
-            $ok = $this->write($file, "<?php return array({$expiry}, {$value});\n", self::$startTime - 10) && $ok;
+            $ok = $this->write($file, $value, self::$startTime - 10) && $ok;
 
             if ($allowCompile) {
                 @opcache_invalidate($file, true);
@@ -215,7 +241,7 @@ trait PhpFilesTrait
      */
     protected function doClear($namespace)
     {
-        $this->values = array();
+        $this->values = [];
 
         return $this->doCommonClear($namespace);
     }
@@ -239,5 +265,18 @@ trait PhpFilesTrait
         }
 
         return @unlink($file);
+    }
+}
+
+/**
+ * @internal
+ */
+class LazyValue
+{
+    public $file;
+
+    public function __construct($file)
+    {
+        $this->file = $file;
     }
 }

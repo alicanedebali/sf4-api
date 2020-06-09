@@ -12,14 +12,20 @@
 namespace Nelmio\ApiDocBundle\Tests\Functional;
 
 use EXSyst\Component\Swagger\Tag;
-use Nelmio\ApiDocBundle\Tests\Functional\Form\DummyEmptyType;
-use Nelmio\ApiDocBundle\Tests\Functional\Form\DummyType;
 
 class FunctionalTest extends WebTestCase
 {
+    protected function setUp()
+    {
+        parent::setUp();
+
+        static::createClient([], ['HTTP_HOST' => 'api.example.com']);
+    }
+
     public function testConfiguredDocumentation()
     {
-        $this->assertEquals('My Test App', $this->getSwaggerDefinition()->getInfo()->getTitle());
+        $this->assertEquals('My Default App', $this->getSwaggerDefinition()->getInfo()->getTitle());
+        $this->assertEquals('My Test App', $this->getSwaggerDefinition('test')->getInfo()->getTitle());
     }
 
     public function testUndocumentedAction()
@@ -120,37 +126,6 @@ class FunctionalTest extends WebTestCase
         $this->assertEmpty($parameter->getFormat());
     }
 
-    public function testFOSRestAction()
-    {
-        $operation = $this->getOperation('/api/fosrest', 'post');
-
-        $parameters = $operation->getParameters();
-        $this->assertTrue($parameters->has('foo', 'query'));
-        $this->assertTrue($parameters->has('body', 'body'));
-        $body = $parameters->get('body', 'body')->getSchema()->getProperties();
-
-        $this->assertTrue($body->has('bar'));
-        $this->assertTrue($body->has('baz'));
-
-        $fooParameter = $parameters->get('foo', 'query');
-        $this->assertNotNull($fooParameter->getPattern());
-        $this->assertEquals('\d+', $fooParameter->getPattern());
-        $this->assertNull($fooParameter->getFormat());
-
-        $barParameter = $body->get('bar');
-        $this->assertNotNull($barParameter->getPattern());
-        $this->assertEquals('\d+', $barParameter->getPattern());
-        $this->assertNull($barParameter->getFormat());
-
-        $bazParameter = $body->get('baz');
-        $this->assertNotNull($bazParameter->getFormat());
-        $this->assertEquals('IsTrue', $bazParameter->getFormat());
-        $this->assertNull($bazParameter->getPattern());
-
-        // The _format path attribute should be removed
-        $this->assertFalse($parameters->has('_format', 'path'));
-    }
-
     public function testDeprecatedAction()
     {
         $operation = $this->getOperation('/api/deprecated', 'get');
@@ -221,6 +196,10 @@ class FunctionalTest extends WebTestCase
                         'type' => 'string',
                         'enum' => ['disabled', 'enabled'],
                     ],
+                    'dateAsInterface' => [
+                        'type' => 'string',
+                        'format' => 'date-time',
+                    ],
                 ],
             ],
             $this->getModel('User')->toArray()
@@ -271,6 +250,8 @@ class FunctionalTest extends WebTestCase
                     'type' => 'string',
                     'enum' => ['foo', 'bar'],
                 ],
+                'save' => [
+                ],
             ],
             'required' => ['dummy', 'dummies', 'entity', 'entities', 'document', 'documents', 'extended_builtin'],
         ], $this->getModel('UserType')->toArray());
@@ -284,6 +265,10 @@ class FunctionalTest extends WebTestCase
                 'foo' => [
                     'type' => 'string',
                     'enum' => ['male', 'female'],
+                ],
+                'boo' => [
+                    'type' => 'boolean',
+                    'enum' => [true, false],
                 ],
                 'foz' => [
                     'type' => 'array',
@@ -374,9 +359,26 @@ class FunctionalTest extends WebTestCase
                     'type' => 'integer',
                     'enum' => ['choice1', 'choice2'],
                 ],
+                'propertyChoiceWithCallbackWithoutClass' => [
+                    'type' => 'integer',
+                    'enum' => ['choice1', 'choice2'],
+                ],
                 'propertyExpression' => [
                     'type' => 'integer',
                     'pattern' => 'If this is a tech post, the category should be either php or symfony!',
+                ],
+                'propertyRange' => [
+                    'type' => 'integer',
+                    'maximum' => 5,
+                    'minimum' => 1,
+                ],
+                'propertyLessThan' => [
+                    'type' => 'integer',
+                    'exclusiveMaximum' => 42,
+                ],
+                'propertyLessThanOrEqual' => [
+                    'type' => 'integer',
+                    'maximum' => 23,
                 ],
             ],
             'type' => 'object',
@@ -387,6 +389,7 @@ class FunctionalTest extends WebTestCase
     {
         $operation = $this->getOperation('/api/configReference', 'get');
         $this->assertEquals('#/definitions/Test', $operation->getResponses()->get('200')->getSchema()->getRef());
+        $this->assertEquals('#/responses/201', $operation->getResponses()->get('201')->getRef());
     }
 
     public function testOperationsWithOtherAnnotationsAction()
@@ -398,5 +401,10 @@ class FunctionalTest extends WebTestCase
         $postOperation = $this->getOperation('/api/multi-annotations', 'post');
         $this->assertSame('This is post', $postOperation->getDescription());
         $this->assertSame('Worked well!', $postOperation->getResponses()->get(200)->getDescription());
+    }
+
+    public function testNoDuplicatedParameters()
+    {
+        $this->assertFalse($this->getOperation('/api/article/{id}', 'get')->getParameters()->has('id', 'path'));
     }
 }

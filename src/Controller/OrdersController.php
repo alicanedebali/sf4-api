@@ -68,7 +68,7 @@ class OrdersController extends AbstractController
     public function createOrder(Request $request)
     {
 
-        $product_id = $request->query->get('product_id');
+        $product_id = $request->query->get('productid');
         $quantity = $request->query->get('quantity');
         $address = $request->query->get('address');
         $shippingDate = $request->query->get('shippingDate');

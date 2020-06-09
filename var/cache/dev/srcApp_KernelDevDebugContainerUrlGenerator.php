@@ -19,35 +19,35 @@ class srcApp_KernelDevDebugContainerUrlGenerator extends Symfony\Component\Routi
         $this->logger = $logger;
         $this->defaultLocale = $defaultLocale;
         if (null === self::$declaredRoutes) {
-            self::$declaredRoutes = array(
-        'orders' => array(array(), array('_controller' => 'App\\Controller\\OrdersController::index'), array(), array(array('text', '/api/orders/all')), array(), array()),
-        'orders_show' => array(array('id'), array('_controller' => 'App\\Controller\\OrdersController::show'), array(), array(array('variable', '/', '[^/]++', 'id', true), array('text', '/api/orders/show')), array(), array()),
-        'create_orders' => array(array(), array('_controller' => 'App\\Controller\\OrdersController::createOrder'), array(), array(array('text', '/api/orders/create')), array(), array()),
-        'update_orders' => array(array('id'), array('_controller' => 'App\\Controller\\OrdersController::updateOrder'), array(), array(array('variable', '/', '[^/]++', 'id', true), array('text', '/api/orders/update')), array(), array()),
-        'product' => array(array(), array('_controller' => 'App\\Controller\\ProductController::index'), array(), array(array('text', '/api/product/all')), array(), array()),
-        'create_product' => array(array(), array('_controller' => 'App\\Controller\\ProductController::createProduct'), array(), array(array('text', '/api/product/create')), array(), array()),
-        'app.swagger' => array(array(), array('_controller' => 'nelmio_api_doc.controller.swagger'), array(), array(array('text', '/api/doc.json')), array(), array()),
-        'app.swagger_ui' => array(array(), array('_controller' => 'nelmio_api_doc.controller.swagger_ui'), array(), array(array('text', '/api/doc')), array(), array()),
-        '_twig_error_test' => array(array('code', '_format'), array('_controller' => 'twig.controller.preview_error::previewErrorPageAction', '_format' => 'html'), array('code' => '\\d+'), array(array('variable', '.', '[^/]++', '_format', true), array('variable', '/', '\\d+', 'code', true), array('text', '/_error')), array(), array()),
-        '_wdt' => array(array('token'), array('_controller' => 'web_profiler.controller.profiler::toolbarAction'), array(), array(array('variable', '/', '[^/]++', 'token', true), array('text', '/_wdt')), array(), array()),
-        '_profiler_home' => array(array(), array('_controller' => 'web_profiler.controller.profiler::homeAction'), array(), array(array('text', '/_profiler/')), array(), array()),
-        '_profiler_search' => array(array(), array('_controller' => 'web_profiler.controller.profiler::searchAction'), array(), array(array('text', '/_profiler/search')), array(), array()),
-        '_profiler_search_bar' => array(array(), array('_controller' => 'web_profiler.controller.profiler::searchBarAction'), array(), array(array('text', '/_profiler/search_bar')), array(), array()),
-        '_profiler_phpinfo' => array(array(), array('_controller' => 'web_profiler.controller.profiler::phpinfoAction'), array(), array(array('text', '/_profiler/phpinfo')), array(), array()),
-        '_profiler_search_results' => array(array('token'), array('_controller' => 'web_profiler.controller.profiler::searchResultsAction'), array(), array(array('text', '/search/results'), array('variable', '/', '[^/]++', 'token', true), array('text', '/_profiler')), array(), array()),
-        '_profiler_open_file' => array(array(), array('_controller' => 'web_profiler.controller.profiler::openAction'), array(), array(array('text', '/_profiler/open')), array(), array()),
-        '_profiler' => array(array('token'), array('_controller' => 'web_profiler.controller.profiler::panelAction'), array(), array(array('variable', '/', '[^/]++', 'token', true), array('text', '/_profiler')), array(), array()),
-        '_profiler_router' => array(array('token'), array('_controller' => 'web_profiler.controller.router::panelAction'), array(), array(array('text', '/router'), array('variable', '/', '[^/]++', 'token', true), array('text', '/_profiler')), array(), array()),
-        '_profiler_exception' => array(array('token'), array('_controller' => 'web_profiler.controller.exception::showAction'), array(), array(array('text', '/exception'), array('variable', '/', '[^/]++', 'token', true), array('text', '/_profiler')), array(), array()),
-        '_profiler_exception_css' => array(array('token'), array('_controller' => 'web_profiler.controller.exception::cssAction'), array(), array(array('text', '/exception.css'), array('variable', '/', '[^/]++', 'token', true), array('text', '/_profiler')), array(), array()),
-        'api_auth_login' => array(array(), array(), array(), array(array('text', '/api/auth/login')), array(), array()),
-        'api_auth_register' => array(array(), array('_controller' => 'App\\Controller\\Api\\ApiAuthController::register'), array(), array(array('text', '/api/auth/register')), array(), array()),
-        'api_user_detail' => array(array('id'), array('_controller' => 'App\\Controller\\Api\\ApiUserController::detail'), array(), array(array('variable', '/', '[^/]++', 'id', true), array('text', '/api/user')), array(), array()),
-    );
+            self::$declaredRoutes = [
+        'orders' => [[], ['_controller' => 'App\\Controller\\OrdersController::index'], [], [['text', '/api/orders/all']], [], []],
+        'orders_show' => [['id'], ['_controller' => 'App\\Controller\\OrdersController::show'], [], [['variable', '/', '[^/]++', 'id', true], ['text', '/api/orders/show']], [], []],
+        'create_orders' => [[], ['_controller' => 'App\\Controller\\OrdersController::createOrder'], [], [['text', '/api/orders/create']], [], []],
+        'update_orders' => [['id'], ['_controller' => 'App\\Controller\\OrdersController::updateOrder'], [], [['variable', '/', '[^/]++', 'id', true], ['text', '/api/orders/update']], [], []],
+        'product' => [[], ['_controller' => 'App\\Controller\\ProductController::index'], [], [['text', '/api/product/all']], [], []],
+        'create_product' => [[], ['_controller' => 'App\\Controller\\ProductController::createProduct'], [], [['text', '/api/product/create']], [], []],
+        'app.swagger' => [[], ['_controller' => 'nelmio_api_doc.controller.swagger'], [], [['text', '/api/doc.json']], [], []],
+        'app.swagger_ui' => [[], ['_controller' => 'nelmio_api_doc.controller.swagger_ui'], [], [['text', '/api/doc']], [], []],
+        '_twig_error_test' => [['code', '_format'], ['_controller' => 'twig.controller.preview_error::previewErrorPageAction', '_format' => 'html'], ['code' => '\\d+'], [['variable', '.', '[^/]++', '_format', true], ['variable', '/', '\\d+', 'code', true], ['text', '/_error']], [], []],
+        '_wdt' => [['token'], ['_controller' => 'web_profiler.controller.profiler::toolbarAction'], [], [['variable', '/', '[^/]++', 'token', true], ['text', '/_wdt']], [], []],
+        '_profiler_home' => [[], ['_controller' => 'web_profiler.controller.profiler::homeAction'], [], [['text', '/_profiler/']], [], []],
+        '_profiler_search' => [[], ['_controller' => 'web_profiler.controller.profiler::searchAction'], [], [['text', '/_profiler/search']], [], []],
+        '_profiler_search_bar' => [[], ['_controller' => 'web_profiler.controller.profiler::searchBarAction'], [], [['text', '/_profiler/search_bar']], [], []],
+        '_profiler_phpinfo' => [[], ['_controller' => 'web_profiler.controller.profiler::phpinfoAction'], [], [['text', '/_profiler/phpinfo']], [], []],
+        '_profiler_search_results' => [['token'], ['_controller' => 'web_profiler.controller.profiler::searchResultsAction'], [], [['text', '/search/results'], ['variable', '/', '[^/]++', 'token', true], ['text', '/_profiler']], [], []],
+        '_profiler_open_file' => [[], ['_controller' => 'web_profiler.controller.profiler::openAction'], [], [['text', '/_profiler/open']], [], []],
+        '_profiler' => [['token'], ['_controller' => 'web_profiler.controller.profiler::panelAction'], [], [['variable', '/', '[^/]++', 'token', true], ['text', '/_profiler']], [], []],
+        '_profiler_router' => [['token'], ['_controller' => 'web_profiler.controller.router::panelAction'], [], [['text', '/router'], ['variable', '/', '[^/]++', 'token', true], ['text', '/_profiler']], [], []],
+        '_profiler_exception' => [['token'], ['_controller' => 'web_profiler.controller.exception::showAction'], [], [['text', '/exception'], ['variable', '/', '[^/]++', 'token', true], ['text', '/_profiler']], [], []],
+        '_profiler_exception_css' => [['token'], ['_controller' => 'web_profiler.controller.exception::cssAction'], [], [['text', '/exception.css'], ['variable', '/', '[^/]++', 'token', true], ['text', '/_profiler']], [], []],
+        'api_auth_login' => [[], [], [], [['text', '/api/auth/login']], [], []],
+        'api_auth_register' => [[], ['_controller' => 'App\\Controller\\Api\\ApiAuthController::register'], [], [['text', '/api/auth/register']], [], []],
+        'api_user_detail' => [['id'], ['_controller' => 'App\\Controller\\Api\\ApiUserController::detail'], [], [['variable', '/', '[^/]++', 'id', true], ['text', '/api/user']], [], []],
+    ];
         }
     }
 
-    public function generate($name, $parameters = array(), $referenceType = self::ABSOLUTE_PATH)
+    public function generate($name, $parameters = [], $referenceType = self::ABSOLUTE_PATH)
     {
         $locale = $parameters['_locale']
             ?? $this->context->getParameter('_locale')

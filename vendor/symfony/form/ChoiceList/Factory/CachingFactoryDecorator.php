@@ -14,25 +14,26 @@ namespace Symfony\Component\Form\ChoiceList\Factory;
 use Symfony\Component\Form\ChoiceList\ChoiceListInterface;
 use Symfony\Component\Form\ChoiceList\Loader\ChoiceLoaderInterface;
 use Symfony\Component\Form\ChoiceList\View\ChoiceListView;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Caches the choice lists created by the decorated factory.
  *
  * @author Bernhard Schussek <bschussek@gmail.com>
  */
-class CachingFactoryDecorator implements ChoiceListFactoryInterface
+class CachingFactoryDecorator implements ChoiceListFactoryInterface, ResetInterface
 {
     private $decoratedFactory;
 
     /**
      * @var ChoiceListInterface[]
      */
-    private $lists = array();
+    private $lists = [];
 
     /**
      * @var ChoiceListView[]
      */
-    private $views = array();
+    private $views = [];
 
     /**
      * Generates a SHA-256 hash for the given value.
@@ -89,7 +90,7 @@ class CachingFactoryDecorator implements ChoiceListFactoryInterface
         // The value is not validated on purpose. The decorated factory may
         // decide which values to accept and which not.
 
-        $hash = self::generateHash(array($choices, $value), 'fromChoices');
+        $hash = self::generateHash([$choices, $value], 'fromChoices');
 
         if (!isset($this->lists[$hash])) {
             $this->lists[$hash] = $this->decoratedFactory->createListFromChoices($choices, $value);
@@ -103,7 +104,7 @@ class CachingFactoryDecorator implements ChoiceListFactoryInterface
      */
     public function createListFromLoader(ChoiceLoaderInterface $loader, $value = null)
     {
-        $hash = self::generateHash(array($loader, $value), 'fromLoader');
+        $hash = self::generateHash([$loader, $value], 'fromLoader');
 
         if (!isset($this->lists[$hash])) {
             $this->lists[$hash] = $this->decoratedFactory->createListFromLoader($loader, $value);
@@ -119,7 +120,7 @@ class CachingFactoryDecorator implements ChoiceListFactoryInterface
     {
         // The input is not validated on purpose. This way, the decorated
         // factory may decide which input to accept and which not.
-        $hash = self::generateHash(array($list, $preferredChoices, $label, $index, $groupBy, $attr));
+        $hash = self::generateHash([$list, $preferredChoices, $label, $index, $groupBy, $attr]);
 
         if (!isset($this->views[$hash])) {
             $this->views[$hash] = $this->decoratedFactory->createView(
@@ -133,5 +134,11 @@ class CachingFactoryDecorator implements ChoiceListFactoryInterface
         }
 
         return $this->views[$hash];
+    }
+
+    public function reset()
+    {
+        $this->lists = [];
+        $this->views = [];
     }
 }

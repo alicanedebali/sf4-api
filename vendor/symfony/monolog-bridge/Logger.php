@@ -12,6 +12,7 @@
 namespace Symfony\Bridge\Monolog;
 
 use Monolog\Logger as BaseLogger;
+use Monolog\ResettableInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Log\DebugLoggerInterface;
 use Symfony\Contracts\Service\ResetInterface;
@@ -36,7 +37,7 @@ class Logger extends BaseLogger implements DebugLoggerInterface, ResetInterface
             return $logger->getLogs(...\func_get_args());
         }
 
-        return array();
+        return [];
     }
 
     /**
@@ -73,6 +74,10 @@ class Logger extends BaseLogger implements DebugLoggerInterface, ResetInterface
     public function reset()
     {
         $this->clear();
+
+        if ($this instanceof ResettableInterface) {
+            parent::reset();
+        }
     }
 
     /**

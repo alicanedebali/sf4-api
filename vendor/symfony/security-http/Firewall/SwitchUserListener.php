@@ -83,13 +83,18 @@ class SwitchUserListener implements ListenerInterface
             return;
         }
 
+        if (null === $this->tokenStorage->getToken()) {
+            throw new AuthenticationCredentialsNotFoundException('Could not find original Token object.');
+        }
+
         if (self::EXIT_VALUE === $username) {
             $this->tokenStorage->setToken($this->attemptExitUser($request));
         } else {
             try {
                 $this->tokenStorage->setToken($this->attemptSwitchUser($request, $username));
             } catch (AuthenticationException $e) {
-                throw new \LogicException(sprintf('Switch User failed: "%s"', $e->getMessage()));
+                // Generate 403 in any conditions to prevent user enumeration vulnerabilities
+                throw new AccessDeniedException('Switch User failed: '.$e->getMessage(), $e);
             }
         }
 
@@ -126,9 +131,26 @@ class SwitchUserListener implements ListenerInterface
             throw new \LogicException(sprintf('You are already switched to "%s" user.', $token->getUsername()));
         }
 
-        $user = $this->provider->loadUserByUsername($username);
+        $currentUsername = $token->getUsername();
+        $nonExistentUsername = '_'.md5(random_bytes(8).$username);
 
-        if (false === $this->accessDecisionManager->decide($token, array($this->role), $user)) {
+        // To protect against user enumeration via timing measurements
+        // we always load both successfully and unsuccessfully
+        try {
+            $user = $this->provider->loadUserByUsername($username);
+
+            try {
+                $this->provider->loadUserByUsername($nonExistentUsername);
+                throw new \LogicException('AuthenticationException expected');
+            } catch (AuthenticationException $e) {
+            }
+        } catch (AuthenticationException $e) {
+            $this->provider->loadUserByUsername($currentUsername);
+
+            throw $e;
+        }
+
+        if (false === $this->accessDecisionManager->decide($token, [$this->role], $user)) {
             $exception = new AccessDeniedException();
             $exception->setAttributes($this->role);
 
@@ -136,7 +158,7 @@ class SwitchUserListener implements ListenerInterface
         }
 
         if (null !== $this->logger) {
-            $this->logger->info('Attempting to switch to user.', array('username' => $username));
+            $this->logger->info('Attempting to switch to user.', ['username' => $username]);
         }
 
         $this->userChecker->checkPostAuth($user);
@@ -165,7 +187,7 @@ class SwitchUserListener implements ListenerInterface
      */
     private function attemptExitUser(Request $request)
     {
-        if (null === ($currentToken = $this->tokenStorage->getToken()) || false === $original = $this->getOriginalToken($currentToken)) {
+        if (false === $original = $this->getOriginalToken($this->tokenStorage->getToken())) {
             throw new AuthenticationCredentialsNotFoundException('Could not find original Token object.');
         }
 

@@ -43,7 +43,7 @@ class SimplePreAuthenticationListenerTest extends TestCase
             ->expects($this->once())
             ->method('authenticate')
             ->with($this->equalTo($this->token))
-            ->will($this->returnValue($this->token))
+            ->willReturn($this->token)
         ;
 
         $simpleAuthenticator = $this->getMockBuilder('Symfony\Component\Security\Http\Authentication\SimplePreAuthenticatorInterface')->getMock();
@@ -51,7 +51,7 @@ class SimplePreAuthenticationListenerTest extends TestCase
             ->expects($this->once())
             ->method('createToken')
             ->with($this->equalTo($this->request), $this->equalTo('secured_area'))
-            ->will($this->returnValue($this->token))
+            ->willReturn($this->token)
         ;
 
         $loginEvent = new InteractiveLoginEvent($this->request, $this->token);
@@ -88,7 +88,7 @@ class SimplePreAuthenticationListenerTest extends TestCase
             ->expects($this->once())
             ->method('createToken')
             ->with($this->equalTo($this->request), $this->equalTo('secured_area'))
-            ->will($this->returnValue($this->token))
+            ->willReturn($this->token)
         ;
 
         $listener = new SimplePreAuthenticationListener($this->tokenStorage, $this->authenticationManager, 'secured_area', $simpleAuthenticator, $this->logger, $this->dispatcher);
@@ -105,13 +105,13 @@ class SimplePreAuthenticationListenerTest extends TestCase
 
         $this->dispatcher = $this->getMockBuilder('Symfony\Component\EventDispatcher\EventDispatcherInterface')->getMock();
 
-        $this->request = new Request(array(), array(), array(), array(), array(), array());
+        $this->request = new Request([], [], [], [], [], []);
 
         $this->event = $this->getMockBuilder('Symfony\Component\HttpKernel\Event\GetResponseEvent')->disableOriginalConstructor()->getMock();
         $this->event
             ->expects($this->any())
             ->method('getRequest')
-            ->will($this->returnValue($this->request))
+            ->willReturn($this->request)
         ;
 
         $this->logger = $this->getMockBuilder('Psr\Log\LoggerInterface')->getMock();

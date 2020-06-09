@@ -2,10 +2,15 @@
 
 namespace Lexik\Bundle\JWTAuthenticationBundle\Tests\Security\Authentication\Firewall;
 
+use Lexik\Bundle\JWTAuthenticationBundle\Event\JWTInvalidEvent;
+use Lexik\Bundle\JWTAuthenticationBundle\Event\JWTNotFoundEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Lexik\Bundle\JWTAuthenticationBundle\Response\JWTAuthenticationFailureResponse;
 use Lexik\Bundle\JWTAuthenticationBundle\Security\Firewall\JWTListener;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as ContractsEventDispatcherInterface;
+use Symfony\Component\Security\Http\Firewall\ListenerInterface;
 
 /**
  * JWTListenerTest.
@@ -22,27 +27,22 @@ class JWTListenerTest extends TestCase
      */
     public function testHandle()
     {
+        $handle = class_exists(RequestEvent::class) ? '__invoke' : 'handle';
         // no token extractor : should return void
 
         $listener = new JWTListener($this->getTokenStorageMock(), $this->getAuthenticationManagerMock());
         $listener->setDispatcher($this->getEventDispatcherMock());
-        $this->assertNull($listener->handle($this->getEvent()));
+        $this->assertNull($listener->$handle($this->getEvent()));
 
         // one token extractor with no result : should return void
 
         $listener   = new JWTListener($this->getTokenStorageMock(), $this->getAuthenticationManagerMock());
         $dispatcher = $this->getEventDispatcherMock();
-        $dispatcher
-            ->expects($this->once())
-            ->method('dispatch')
-            ->with(
-                $this->equalTo(Events::JWT_NOT_FOUND),
-                $this->isInstanceOf('Lexik\Bundle\JWTAuthenticationBundle\Event\JWTNotFoundEvent')
-            );
+        $this->expectEvent(Events::JWT_NOT_FOUND, JWTNotFoundEvent::class, $dispatcher);
 
         $listener->setDispatcher($dispatcher);
         $listener->addTokenExtractor($this->getAuthorizationHeaderTokenExtractorMock(false));
-        $this->assertNull($listener->handle($this->getEvent()));
+        $this->assertNull($listener->$handle($this->getEvent()));
 
         // request token found : should enter authentication process
 
@@ -52,7 +52,7 @@ class JWTListenerTest extends TestCase
         $listener = new JWTListener($this->getTokenStorageMock(), $authenticationManager);
         $listener->setDispatcher($this->getEventDispatcherMock());
         $listener->addTokenExtractor($this->getAuthorizationHeaderTokenExtractorMock('token'));
-        $listener->handle($this->getEvent());
+        $listener->$handle($this->getEvent());
 
         // request token found : authentication fail
 
@@ -68,13 +68,8 @@ class JWTListenerTest extends TestCase
 
         $listener   = new JWTListener($this->getTokenStorageMock(), $authenticationManager);
         $dispatcher = $this->getEventDispatcherMock();
-        $dispatcher
-            ->expects($this->once())
-            ->method('dispatch')
-            ->with(
-                $this->equalTo(Events::JWT_INVALID),
-                $this->isInstanceOf('Lexik\Bundle\JWTAuthenticationBundle\Event\JWTInvalidEvent')
-            );
+        $this->expectEvent(Events::JWT_INVALID, JWTInvalidEvent::class, $dispatcher);
+
         $listener->setDispatcher($dispatcher);
         $listener->addTokenExtractor($this->getAuthorizationHeaderTokenExtractorMock('token'));
 
@@ -84,7 +79,7 @@ class JWTListenerTest extends TestCase
             ->method('setResponse')
             ->with(new JWTAuthenticationFailureResponse($invalidTokenException->getMessage()));
 
-        $listener->handle($event);
+        $listener->$handle($event);
     }
 
     /**
@@ -146,7 +141,7 @@ class JWTListenerTest extends TestCase
             ->getMock();
 
         $event = $this
-            ->getMockBuilder('Symfony\Component\HttpKernel\Event\GetResponseEvent')
+            ->getMockBuilder(class_exists(RequestEvent::class) ? RequestEvent::class : 'Symfony\Component\HttpKernel\Event\GetResponseEvent')
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -166,5 +161,16 @@ class JWTListenerTest extends TestCase
         return $this->getMockBuilder('Symfony\Component\EventDispatcher\EventDispatcher')
             ->disableOriginalConstructor()
             ->getMock();
+    }
+
+    private function expectEvent($eventName, $eventType, $dispatcher)
+    {
+        if ($dispatcher instanceof ContractsEventDispatcherInterface) {
+            $dispatcher->expects($this->once())->method('dispatch')->with($this->isInstanceOf($eventType), $eventName);
+
+            return;
+        }
+
+        $dispatcher->expects($this->once())->method('dispatch')->with($eventName, $this->isInstanceOf($eventType));
     }
 }

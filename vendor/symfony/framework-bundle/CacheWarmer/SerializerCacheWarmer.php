@@ -36,7 +36,7 @@ class SerializerCacheWarmer extends AbstractPhpFileCacheWarmer
      */
     public function __construct(array $loaders, string $phpArrayFile)
     {
-        if (2 < \func_num_args() && \func_get_arg(2) instanceof CacheItemPoolInterface) {
+        if (2 < \func_num_args() && func_get_arg(2) instanceof CacheItemPoolInterface) {
             @trigger_error(sprintf('The CacheItemPoolInterface $fallbackPool argument of "%s()" is deprecated since Symfony 4.2, you should not pass it anymore.', __METHOD__), E_USER_DEPRECATED);
         }
         parent::__construct($phpArrayFile);
@@ -76,7 +76,7 @@ class SerializerCacheWarmer extends AbstractPhpFileCacheWarmer
      */
     private function extractSupportedLoaders(array $loaders)
     {
-        $supportedLoaders = array();
+        $supportedLoaders = [];
 
         foreach ($loaders as $loader) {
             if ($loader instanceof XmlFileLoader || $loader instanceof YamlFileLoader) {

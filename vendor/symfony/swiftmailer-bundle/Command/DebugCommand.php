@@ -50,6 +50,9 @@ EOF
         ;
     }
 
+    /**
+     * @return int
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->io = new SymfonyStyle($input, $output);
@@ -60,6 +63,8 @@ EOF
         } else {
             $this->outputMailers();
         }
+
+        return 0;
     }
 
     protected function outputMailers($routes = null)
@@ -113,8 +118,8 @@ EOF
 
         $tableRows[] = ['Name', $name];
         $tableRows[] = ['Service', $service];
-        $tableRows[] = ['Class', get_class($mailer)];
-        $tableRows[] = ['Transport', sprintf('%s (%s)', sprintf('swiftmailer.mailer.%s.transport.name', $name), get_class($transport))];
+        $tableRows[] = ['Class', \get_class($mailer)];
+        $tableRows[] = ['Transport', sprintf('%s (%s)', sprintf('swiftmailer.mailer.%s.transport.name', $name), \get_class($transport))];
         $tableRows[] = ['Spool', $spool];
         if ($this->getContainer()->hasParameter(sprintf('swiftmailer.spool.%s.file.path', $name))) {
             $tableRows[] = ['Spool file', $this->getContainer()->getParameter(sprintf('swiftmailer.spool.%s.file.path', $name))];

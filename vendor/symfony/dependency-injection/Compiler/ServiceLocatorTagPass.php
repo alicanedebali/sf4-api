@@ -101,7 +101,11 @@ final class ServiceLocatorTagPass extends AbstractRecursivePass
             ->setPublic(false)
             ->addTag('container.service_locator');
 
-        if (!$container->has($id = '.service_locator.'.ContainerBuilder::hash($locator))) {
+        if (null !== $callerId && $container->hasDefinition($callerId)) {
+            $locator->setBindings($container->getDefinition($callerId)->getBindings());
+        }
+
+        if (!$container->hasDefinition($id = '.service_locator.'.ContainerBuilder::hash($locator))) {
             $container->setDefinition($id, $locator);
         }
 
@@ -112,8 +116,8 @@ final class ServiceLocatorTagPass extends AbstractRecursivePass
             // to derivate customized instances from the prototype one.
             $container->register($id .= '.'.$callerId, ServiceLocator::class)
                 ->setPublic(false)
-                ->setFactory(array(new Reference($locatorId), 'withContext'))
-                ->addTag('container.service_locator_context', array('id' => $callerId))
+                ->setFactory([new Reference($locatorId), 'withContext'])
+                ->addTag('container.service_locator_context', ['id' => $callerId])
                 ->addArgument($callerId)
                 ->addArgument(new Reference('service_container'));
         }

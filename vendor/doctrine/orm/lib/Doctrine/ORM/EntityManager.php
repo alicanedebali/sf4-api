@@ -28,7 +28,11 @@ use Doctrine\ORM\Query\ResultSetMapping;
 use Doctrine\ORM\Proxy\ProxyFactory;
 use Doctrine\ORM\Query\FilterCollection;
 use Doctrine\Common\Util\ClassUtils;
+use Doctrine\Persistence\Mapping\MappingException;
+use Doctrine\Persistence\ObjectRepository;
 use Throwable;
+use const E_USER_DEPRECATED;
+use function trigger_error;
 
 /**
  * The EntityManager is the central access point to ORM functionality.
@@ -354,6 +358,13 @@ use Throwable;
      */
     public function flush($entity = null)
     {
+        if ($entity !== null) {
+            @trigger_error(
+                'Calling ' . __METHOD__ . '() with any arguments to flush specific entities is deprecated and will not be supported in Doctrine ORM 3.0.',
+                E_USER_DEPRECATED
+            );
+        }
+
         $this->errorIfClosed();
 
         $this->unitOfWork->commit($entity);
@@ -537,14 +548,21 @@ use Throwable;
      *
      * @return void
      *
-     * @throws ORMInvalidArgumentException                           if a non-null non-string value is given
-     * @throws \Doctrine\Common\Persistence\Mapping\MappingException if a $entityName is given, but that entity is not
-     *                                                               found in the mappings
+     * @throws ORMInvalidArgumentException If a non-null non-string value is given.
+     * @throws MappingException            If a $entityName is given, but that entity is not
+     *                                     found in the mappings.
      */
     public function clear($entityName = null)
     {
         if (null !== $entityName && ! is_string($entityName)) {
             throw ORMInvalidArgumentException::invalidEntityName($entityName);
+        }
+
+        if ($entityName !== null) {
+            @trigger_error(
+                'Calling ' . __METHOD__ . '() with any arguments to clear specific entities is deprecated and will not be supported in Doctrine ORM 3.0.',
+                E_USER_DEPRECATED
+            );
         }
 
         $this->unitOfWork->clear(
@@ -649,9 +667,13 @@ use Throwable;
      * @return void
      *
      * @throws ORMInvalidArgumentException
+     *
+     * @deprecated 2.7 This method is being removed from the ORM and won't have any replacement
      */
     public function detach($entity)
     {
+        @trigger_error('Method ' . __METHOD__ . '() is deprecated and will be removed in Doctrine ORM 3.0.', E_USER_DEPRECATED);
+
         if ( ! is_object($entity)) {
             throw ORMInvalidArgumentException::invalidObject('EntityManager#detach()', $entity);
         }
@@ -670,9 +692,13 @@ use Throwable;
      *
      * @throws ORMInvalidArgumentException
      * @throws ORMException
+     *
+     * @deprecated 2.7 This method is being removed from the ORM and won't have any replacement
      */
     public function merge($entity)
     {
+        @trigger_error('Method ' . __METHOD__ . '() is deprecated and will be removed in Doctrine ORM 3.0.', E_USER_DEPRECATED);
+
         if ( ! is_object($entity)) {
             throw ORMInvalidArgumentException::invalidObject('EntityManager#merge()', $entity);
         }
@@ -684,12 +710,11 @@ use Throwable;
 
     /**
      * {@inheritDoc}
-     *
-     * @todo Implementation need. This is necessary since $e2 = clone $e1; throws an E_FATAL when access anything on $e:
-     * Fatal error: Maximum function nesting level of '100' reached, aborting!
      */
     public function copy($entity, $deep = false)
     {
+        @trigger_error('Method ' . __METHOD__ . '() is deprecated and will be removed in Doctrine ORM 3.0.', E_USER_DEPRECATED);
+
         throw new \BadMethodCallException("Not implemented.");
     }
 
@@ -706,7 +731,7 @@ use Throwable;
      *
      * @param string $entityName The name of the entity.
      *
-     * @return \Doctrine\Common\Persistence\ObjectRepository|\Doctrine\ORM\EntityRepository The repository class.
+     * @return ObjectRepository|EntityRepository The repository class.
      */
     public function getRepository($entityName)
     {

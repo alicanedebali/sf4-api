@@ -13,14 +13,14 @@ namespace Symfony\Bundle\MakerBundle\Util;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use PhpParser\Builder;
 use PhpParser\BuilderHelpers;
 use PhpParser\Comment\Doc;
 use PhpParser\Lexer;
 use PhpParser\Node;
-use PhpParser\Parser;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor;
-use PhpParser\Builder;
+use PhpParser\Parser;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\Doctrine\BaseCollectionRelation;
 use Symfony\Bundle\MakerBundle\Doctrine\BaseRelation;
@@ -118,7 +118,7 @@ final class ClassSourceManipulator
             $this->buildAnnotationLine(
                 '@ORM\\Embedded',
                 [
-                    'class' => $className,
+                    'class' => new ClassNameValue($className, $typeHint),
                 ]
             ),
         ];
@@ -174,24 +174,8 @@ final class ClassSourceManipulator
     {
         $this->addUseStatementIfNecessary($interfaceName);
 
-        /*
-         * Changing the interface with this method, causes a problem
-         * with the "diff" pretty printer: it appears to rewrite
-         * all the internal class source, which removes line breaks.
-         *
-         * For that reason, we work around:
-         *  See: https://github.com/nikic/PHP-Parser/pull/527
-         */
-        //$this->getClassNode()->implements[] = new Node\Name(Str::getShortClassName($interfaceName));
-        //$this->updateSourceCodeFromNewStmts();
-
-        // purposely only works in simple cases: no extends or implements
-        $newCode = str_replace(
-            sprintf('class %s', $this->getClassNode()->name->toString()),
-            sprintf('class %s implements %s', $this->getClassNode()->name->toString(), Str::getShortClassName($interfaceName)),
-            $this->sourceCode
-        );
-        $this->setSourceCode($newCode);
+        $this->getClassNode()->implements[] = new Node\Name(Str::getShortClassName($interfaceName));
+        $this->updateSourceCodeFromNewStmts();
     }
 
     public function addAccessorMethod(string $propertyName, string $methodName, $returnType, bool $isReturnTypeNullable, array $commentLines = [], $typeCast = null)
@@ -404,8 +388,12 @@ final class ClassSourceManipulator
             return 'null';
         }
 
-        if (\is_int($value)) {
+        if (\is_int($value) || '0' === $value) {
             return $value;
+        }
+
+        if ($value instanceof ClassNameValue) {
+            return sprintf('%s::class', $value->getShortName());
         }
 
         if (\is_array($value)) {
@@ -423,7 +411,7 @@ final class ClassSourceManipulator
         }
 
         $annotationOptions = [
-            'targetEntity' => $relation->getTargetClassName(),
+            'targetEntity' => new ClassNameValue($typeHint, $relation->getTargetClassName()),
         ];
         if ($relation->isOwning()) {
             // sometimes, we don't map the inverse relation
@@ -492,7 +480,7 @@ final class ClassSourceManipulator
         $collectionTypeHint = $this->addUseStatementIfNecessary(Collection::class);
 
         $annotationOptions = [
-            'targetEntity' => $relation->getTargetClassName(),
+            'targetEntity' => new ClassNameValue($typeHint, $relation->getTargetClassName()),
         ];
         if ($relation->isOwning()) {
             // sometimes, we don't map the inverse relation
@@ -703,8 +691,6 @@ final class ClassSourceManipulator
     }
 
     /**
-     * @param string $class
-     *
      * @return string The alias to use when referencing this class
      */
     public function addUseStatementIfNecessary(string $class): string
@@ -853,8 +839,6 @@ final class ClassSourceManipulator
     }
 
     /**
-     * @param callable $filterCallback
-     *
      * @return Node|null
      */
     private function findFirstNode(callable $filterCallback)
@@ -868,9 +852,6 @@ final class ClassSourceManipulator
     }
 
     /**
-     * @param callable $filterCallback
-     * @param array    $ast
-     *
      * @return Node|null
      */
     private function findLastNode(callable $filterCallback, array $ast)
@@ -1002,11 +983,14 @@ final class ClassSourceManipulator
             case 'string':
             case 'text':
             case 'guid':
+            case 'bigint':
+            case 'decimal':
                 return 'string';
 
             case 'array':
             case 'simple_array':
             case 'json':
+            case 'json_array':
                 return 'array';
 
             case 'boolean':
@@ -1014,7 +998,6 @@ final class ClassSourceManipulator
 
             case 'integer':
             case 'smallint':
-            case 'bigint':
                 return 'int';
 
             case 'float':
@@ -1036,7 +1019,6 @@ final class ClassSourceManipulator
                 return '\\'.\DateInterval::class;
 
             case 'object':
-            case 'decimal':
             case 'binary':
             case 'blob':
             default:
@@ -1060,8 +1042,6 @@ final class ClassSourceManipulator
      * Adds this new node where a new property should go.
      *
      * Useful for adding properties, or adding a constructor.
-     *
-     * @param Node $newNode
      */
     private function addNodeAfterProperties(Node $newNode)
     {
@@ -1117,13 +1097,13 @@ final class ClassSourceManipulator
                 self::CONTEXT_CLASS_METHOD
             ));
 
-            // if ($this !== $user->getUserProfile()) {
+            // if ($user->getUserProfile() !== $this) {
             $ifNode = new Node\Stmt\If_(new Node\Expr\BinaryOp\NotIdentical(
-                new Node\Expr\Variable('this'),
                 new Node\Expr\MethodCall(
                     new Node\Expr\Variable($relation->getPropertyName()),
                     $relation->getTargetGetterMethodName()
-                )
+                ),
+                new Node\Expr\Variable('this')
             ));
 
             // $user->setUserProfile($this);
@@ -1152,8 +1132,8 @@ final class ClassSourceManipulator
                 new Node\Expr\Variable($varName),
                 new Node\Expr\Ternary(
                     new Node\Expr\BinaryOp\Identical(
-                        new Node\Expr\Variable($relation->getPropertyName()),
-                        $this->createNullConstant()
+                        $this->createNullConstant(),
+                        new Node\Expr\Variable($relation->getPropertyName())
                     ),
                     $this->createNullConstant(),
                     new Node\Expr\Variable('this')
@@ -1161,13 +1141,13 @@ final class ClassSourceManipulator
             ))
         );
 
-        // if ($newUserProfile !== $user->getUserProfile()) {
+        // if ($user->getUserProfile() !== $newUserProfile) {
         $ifNode = new Node\Stmt\If_(new Node\Expr\BinaryOp\NotIdentical(
-            new Node\Expr\Variable($varName),
             new Node\Expr\MethodCall(
                 new Node\Expr\Variable($relation->getPropertyName()),
                 $relation->getTargetGetterMethodName()
-            )
+            ),
+            new Node\Expr\Variable($varName)
         ));
 
         // $user->setUserProfile($newUserProfile);

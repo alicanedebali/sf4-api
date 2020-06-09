@@ -10,6 +10,7 @@ use Symfony\Bundle\SecurityBundle\DependencyInjection\SecurityExtension;
 use Symfony\Component\DependencyInjection\Compiler\ResolveChildDefinitionsPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
  * Tests the bundle extension and the configuration of services.
@@ -74,7 +75,7 @@ class LexikJWTAuthenticationExtensionTest extends TestCase
     public function testTokenExtractorsConfiguration()
     {
         // Default configuration
-        $chainTokenExtractor = $this->getContainer()->getDefinition('lexik_jwt_authentication.extractor.chain_extractor');
+        $chainTokenExtractor = $this->getContainer(['secret_key' => 'private.pem', 'public_key' => 'public.pem'])->getDefinition('lexik_jwt_authentication.extractor.chain_extractor');
 
         $extractorIds = array_map('strval', $chainTokenExtractor->getArgument(0));
 
@@ -83,7 +84,7 @@ class LexikJWTAuthenticationExtensionTest extends TestCase
         $this->assertNotContains('lexik_jwt_authentication.extractor.query_parameter_extractor', $extractorIds);
 
         // Custom configuration
-        $chainTokenExtractor = $this->getContainer(['token_extractors' => ['authorization_header' => true, 'cookie' => true]])
+        $chainTokenExtractor = $this->getContainer(['secret_key' => 'private.pem', 'public_key' => 'public.pem', 'token_extractors' => ['authorization_header' => true, 'cookie' => true]])
             ->getDefinition('lexik_jwt_authentication.extractor.chain_extractor');
 
         $extractorIds = array_map('strval', $chainTokenExtractor->getArgument(0));
@@ -96,12 +97,12 @@ class LexikJWTAuthenticationExtensionTest extends TestCase
     private function getContainer($config = [])
     {
         $container = new ContainerBuilder();
-        $container->registerExtension(new SecurityExtension());
         $container->registerExtension(new LexikJWTAuthenticationExtension());
         $container->loadFromExtension('lexik_jwt_authentication', $config);
 
         $container->getCompilerPassConfig()->setOptimizationPasses([new ResolveChildDefinitionsPass()]);
         $container->getCompilerPassConfig()->setRemovingPasses([]);
+        $container->getCompilerPassConfig()->setAfterRemovingPasses([]);
         $container->compile();
 
         return $container;

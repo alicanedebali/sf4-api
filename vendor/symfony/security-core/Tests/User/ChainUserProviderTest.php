@@ -33,10 +33,10 @@ class ChainUserProviderTest extends TestCase
             ->expects($this->once())
             ->method('loadUserByUsername')
             ->with($this->equalTo('foo'))
-            ->will($this->returnValue($account = $this->getAccount()))
+            ->willReturn($account = $this->getAccount())
         ;
 
-        $provider = new ChainUserProvider(array($provider1, $provider2));
+        $provider = new ChainUserProvider([$provider1, $provider2]);
         $this->assertSame($account, $provider->loadUserByUsername('foo'));
     }
 
@@ -61,7 +61,7 @@ class ChainUserProviderTest extends TestCase
             ->willThrowException(new UsernameNotFoundException('not found'))
         ;
 
-        $provider = new ChainUserProvider(array($provider1, $provider2));
+        $provider = new ChainUserProvider([$provider1, $provider2]);
         $provider->loadUserByUsername('foo');
     }
 
@@ -78,10 +78,10 @@ class ChainUserProviderTest extends TestCase
         $provider2
             ->expects($this->once())
             ->method('refreshUser')
-            ->will($this->returnValue($account = $this->getAccount()))
+            ->willReturn($account = $this->getAccount())
         ;
 
-        $provider = new ChainUserProvider(array($provider1, $provider2));
+        $provider = new ChainUserProvider([$provider1, $provider2]);
         $this->assertSame($account, $provider->refreshUser($this->getAccount()));
     }
 
@@ -98,10 +98,10 @@ class ChainUserProviderTest extends TestCase
         $provider2
             ->expects($this->once())
             ->method('refreshUser')
-            ->will($this->returnValue($account = $this->getAccount()))
+            ->willReturn($account = $this->getAccount())
         ;
 
-        $provider = new ChainUserProvider(array($provider1, $provider2));
+        $provider = new ChainUserProvider([$provider1, $provider2]);
         $this->assertSame($account, $provider->refreshUser($this->getAccount()));
     }
 
@@ -124,7 +124,7 @@ class ChainUserProviderTest extends TestCase
             ->willThrowException(new UnsupportedUserException('unsupported'))
         ;
 
-        $provider = new ChainUserProvider(array($provider1, $provider2));
+        $provider = new ChainUserProvider([$provider1, $provider2]);
         $provider->refreshUser($this->getAccount());
     }
 
@@ -135,7 +135,7 @@ class ChainUserProviderTest extends TestCase
             ->expects($this->once())
             ->method('supportsClass')
             ->with($this->equalTo('foo'))
-            ->will($this->returnValue(false))
+            ->willReturn(false)
         ;
 
         $provider2 = $this->getProvider();
@@ -143,10 +143,10 @@ class ChainUserProviderTest extends TestCase
             ->expects($this->once())
             ->method('supportsClass')
             ->with($this->equalTo('foo'))
-            ->will($this->returnValue(true))
+            ->willReturn(true)
         ;
 
-        $provider = new ChainUserProvider(array($provider1, $provider2));
+        $provider = new ChainUserProvider([$provider1, $provider2]);
         $this->assertTrue($provider->supportsClass('foo'));
     }
 
@@ -157,7 +157,7 @@ class ChainUserProviderTest extends TestCase
             ->expects($this->once())
             ->method('supportsClass')
             ->with($this->equalTo('foo'))
-            ->will($this->returnValue(false))
+            ->willReturn(false)
         ;
 
         $provider2 = $this->getProvider();
@@ -165,10 +165,10 @@ class ChainUserProviderTest extends TestCase
             ->expects($this->once())
             ->method('supportsClass')
             ->with($this->equalTo('foo'))
-            ->will($this->returnValue(false))
+            ->willReturn(false)
         ;
 
-        $provider = new ChainUserProvider(array($provider1, $provider2));
+        $provider = new ChainUserProvider([$provider1, $provider2]);
         $this->assertFalse($provider->supportsClass('foo'));
     }
 
@@ -185,10 +185,10 @@ class ChainUserProviderTest extends TestCase
         $provider2
             ->expects($this->once())
             ->method('refreshUser')
-            ->will($this->returnValue($account = $this->getAccount()))
+            ->willReturn($account = $this->getAccount())
         ;
 
-        $provider = new ChainUserProvider(new \ArrayObject(array($provider1, $provider2)));
+        $provider = new ChainUserProvider(new \ArrayObject([$provider1, $provider2]));
         $this->assertSame($account, $provider->refreshUser($this->getAccount()));
     }
 

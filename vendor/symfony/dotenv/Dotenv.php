@@ -34,7 +34,6 @@ final class Dotenv
     private $lineno;
     private $data;
     private $end;
-    private $state;
     private $values;
 
     /**
@@ -65,7 +64,7 @@ final class Dotenv
      * @throws FormatException when a file has a syntax error
      * @throws PathException   when a file does not exist or is not readable
      */
-    public function loadEnv(string $path, string $varName = 'APP_ENV', string $defaultEnv = 'dev', array $testEnvs = array('test')): void
+    public function loadEnv(string $path, string $varName = 'APP_ENV', string $defaultEnv = 'dev', array $testEnvs = ['test']): void
     {
         if (file_exists($path) || !file_exists($p = "$path.dist")) {
             $this->load($path);
@@ -74,7 +73,7 @@ final class Dotenv
         }
 
         if (null === $env = $_SERVER[$varName] ?? $_ENV[$varName] ?? null) {
-            $this->populate(array($varName => $env = $defaultEnv));
+            $this->populate([$varName => $env = $defaultEnv]);
         }
 
         if (!\in_array($env, $testEnvs, true) && file_exists($p = "$path.local")) {
@@ -158,38 +157,38 @@ final class Dotenv
     public function parse(string $data, string $path = '.env'): array
     {
         $this->path = $path;
-        $this->data = str_replace(array("\r\n", "\r"), "\n", $data);
+        $this->data = str_replace(["\r\n", "\r"], "\n", $data);
         $this->lineno = 1;
         $this->cursor = 0;
         $this->end = \strlen($this->data);
-        $this->state = self::STATE_VARNAME;
-        $this->values = array();
+        $state = self::STATE_VARNAME;
+        $this->values = [];
         $name = '';
 
         $this->skipEmptyLines();
 
         while ($this->cursor < $this->end) {
-            switch ($this->state) {
+            switch ($state) {
                 case self::STATE_VARNAME:
                     $name = $this->lexVarname();
-                    $this->state = self::STATE_VALUE;
+                    $state = self::STATE_VALUE;
                     break;
 
                 case self::STATE_VALUE:
                     $this->values[$name] = $this->lexValue();
-                    $this->state = self::STATE_VARNAME;
+                    $state = self::STATE_VARNAME;
                     break;
             }
         }
 
-        if (self::STATE_VALUE === $this->state) {
+        if (self::STATE_VALUE === $state) {
             $this->values[$name] = '';
         }
 
         try {
             return $this->values;
         } finally {
-            $this->values = array();
+            $this->values = [];
             $this->data = null;
             $this->path = null;
         }
@@ -212,7 +211,7 @@ final class Dotenv
         }
 
         if (' ' === $this->data[$this->cursor] || "\t" === $this->data[$this->cursor]) {
-            throw $this->createFormatException('Whitespace are not supported after the variable name');
+            throw $this->createFormatException('Whitespace characters are not supported after the variable name');
         }
 
         if ('=' !== $this->data[$this->cursor]) {
@@ -275,7 +274,7 @@ final class Dotenv
                     throw $this->createFormatException('Missing quote to end the value');
                 }
                 ++$this->cursor;
-                $value = str_replace(array('\\"', '\r', '\n'), array('"', "\r", "\n"), $value);
+                $value = str_replace(['\\"', '\r', '\n'], ['"', "\r", "\n"], $value);
                 $resolvedValue = $value;
                 $resolvedValue = $this->resolveVariables($resolvedValue);
                 $resolvedValue = $this->resolveCommands($resolvedValue);
@@ -284,7 +283,7 @@ final class Dotenv
             } else {
                 $value = '';
                 $prevChr = $this->data[$this->cursor - 1];
-                while ($this->cursor < $this->end && !\in_array($this->data[$this->cursor], array("\n", '"', "'"), true) && !((' ' === $prevChr || "\t" === $prevChr) && '#' === $this->data[$this->cursor])) {
+                while ($this->cursor < $this->end && !\in_array($this->data[$this->cursor], ["\n", '"', "'"], true) && !((' ' === $prevChr || "\t" === $prevChr) && '#' === $this->data[$this->cursor])) {
                     if ('\\' === $this->data[$this->cursor] && isset($this->data[$this->cursor + 1]) && ('"' === $this->data[$this->cursor + 1] || "'" === $this->data[$this->cursor + 1])) {
                         ++$this->cursor;
                     }
@@ -383,7 +382,7 @@ final class Dotenv
                 throw new \LogicException('Resolving commands requires the Symfony Process component.');
             }
 
-            $process = \method_exists(Process::class, 'fromShellCommandline') ? Process::fromShellCommandline('echo '.$matches[0]) : new Process('echo '.$matches[0]);
+            $process = method_exists(Process::class, 'fromShellCommandline') ? Process::fromShellCommandline('echo '.$matches[0]) : new Process('echo '.$matches[0]);
             $process->inheritEnvironmentVariables(true);
             $process->setEnv($this->values);
             try {

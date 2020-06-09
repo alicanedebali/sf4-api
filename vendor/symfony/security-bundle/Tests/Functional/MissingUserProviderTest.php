@@ -11,7 +11,7 @@
 
 namespace Symfony\Bundle\SecurityBundle\Tests\Functional;
 
-class MissingUserProviderTest extends WebTestCase
+class MissingUserProviderTest extends AbstractWebTestCase
 {
     /**
      * @expectedException \Symfony\Component\Config\Definition\Exception\InvalidConfigurationException
@@ -19,11 +19,11 @@ class MissingUserProviderTest extends WebTestCase
      */
     public function testUserProviderIsNeeded()
     {
-        $client = $this->createClient(array('test_case' => 'MissingUserProvider', 'root_config' => 'config.yml'));
+        $client = $this->createClient(['test_case' => 'MissingUserProvider', 'root_config' => 'config.yml']);
 
-        $client->request('GET', '/', array(), array(), array(
+        $client->request('GET', '/', [], [], [
             'PHP_AUTH_USER' => 'username',
             'PHP_AUTH_PW' => 'pa$$word',
-        ));
+        ]);
     }
 }

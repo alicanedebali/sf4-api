@@ -13,11 +13,12 @@ namespace Nelmio\ApiDocBundle\Util;
 
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerNameParser;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Kernel;
 
 /**
  * @internal
  */
-final class ControllerReflector
+class ControllerReflector
 {
     private $container;
 
@@ -25,10 +26,13 @@ final class ControllerReflector
 
     private $controllers = [];
 
-    public function __construct(ContainerInterface $container, ControllerNameParser $controllerNameParser)
+    public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
-        $this->controllerNameParser = $controllerNameParser;
+
+        if (1 < \func_num_args() && func_get_arg(1) instanceof ControllerNameParser) {
+            $this->controllerNameParser = func_get_arg(1);
+        }
     }
 
     /**
@@ -55,40 +59,41 @@ final class ControllerReflector
         }
     }
 
-    public function getReflectionClassAndMethod(string $controller)
-    {
-        $callable = $this->getClassAndMethod($controller);
-        if (null === $callable) {
-            return;
-        }
-
-        list($class, $method) = $callable;
-
-        try {
-            return [new \ReflectionClass($class), new \ReflectionMethod($class, $method)];
-        } catch (\ReflectionException $e) {
-            // In case we can't reflect the controller, we just
-            // ignore the route
-        }
-    }
-
     private function getClassAndMethod(string $controller)
     {
         if (isset($this->controllers[$controller])) {
             return $this->controllers[$controller];
         }
 
-        if (false === strpos($controller, '::') && 2 === substr_count($controller, ':')) {
-            $controller = $this->controllerNameParser->parse($controller);
+        if ($this->controllerNameParser && false === strpos($controller, '::') && 2 === substr_count($controller, ':')) {
+            $deprecatedNotation = $controller;
+
+            try {
+                $controller = $this->controllerNameParser->parse($controller);
+
+                @trigger_error(sprintf('Referencing controllers with %s is deprecated since Symfony 4.1, use "%s" instead.', $deprecatedNotation, $controller), E_USER_DEPRECATED);
+            } catch (\InvalidArgumentException $e) {
+                // unable to optimize unknown notation
+            }
         }
 
         if (preg_match('#(.+)::([\w]+)#', $controller, $matches)) {
             $class = $matches[1];
             $method = $matches[2];
+            // Since symfony 4.1 routes are defined like service_id::method_name
+            if (Kernel::VERSION_ID >= 40100 && !class_exists($class)) {
+                if ($this->container->has($class)) {
+                    $class = get_class($this->container->get($class));
+                    if (class_exists(ClassUtils::class)) {
+                        $class = ClassUtils::getRealClass($class);
+                    }
+                }
+            }
         } elseif (class_exists($controller)) {
             $class = $controller;
             $method = '__invoke';
         } else {
+            // Has to be removed when dropping support of symfony < 4.1
             if (preg_match('#(.+):([\w]+)#', $controller, $matches)) {
                 $controller = $matches[1];
                 $method = $matches[2];

@@ -40,16 +40,16 @@ class AddValidatorInitializersPass implements CompilerPassInterface
             return;
         }
 
-        $initializers = array();
+        $initializers = [];
         foreach ($container->findTaggedServiceIds($this->initializerTag, true) as $id => $attributes) {
             $initializers[] = new Reference($id);
         }
 
-        $container->getDefinition($this->builderService)->addMethodCall('addObjectInitializers', array($initializers));
+        $container->getDefinition($this->builderService)->addMethodCall('addObjectInitializers', [$initializers]);
 
         // @deprecated logic, to be removed in Symfony 5.0
         $builder = $container->getDefinition($this->builderService);
-        $calls = array();
+        $calls = [];
 
         foreach ($builder->getMethodCalls() as list($method, $arguments)) {
             if ('setTranslator' === $method) {
@@ -62,7 +62,7 @@ class AddValidatorInitializersPass implements CompilerPassInterface
                 }
 
                 while (!($class = $translator->getClass()) && $translator instanceof ChildDefinition) {
-                    $translator = $translator->getParent();
+                    $translator = $container->findDefinition($translator->getParent());
                 }
 
                 if (!is_subclass_of($class, LegacyTranslatorInterface::class)) {
@@ -70,7 +70,7 @@ class AddValidatorInitializersPass implements CompilerPassInterface
                 }
             }
 
-            $calls[] = array($method, $arguments);
+            $calls[] = [$method, $arguments];
         }
 
         $builder->setMethodCalls($calls);

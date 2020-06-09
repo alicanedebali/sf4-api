@@ -6,6 +6,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Event\AuthenticationFailureEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Lexik\Bundle\JWTAuthenticationBundle\Response\JWTAuthenticationFailureResponse;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as ContractsEventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerInterface;
@@ -35,9 +36,16 @@ class AuthenticationFailureHandler implements AuthenticationFailureHandlerInterf
      */
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception)
     {
-        $event = new AuthenticationFailureEvent($exception, new JWTAuthenticationFailureResponse());
+        $event = new AuthenticationFailureEvent(
+            $exception,
+            new JWTAuthenticationFailureResponse($exception->getMessageKey())
+        );
 
-        $this->dispatcher->dispatch(Events::AUTHENTICATION_FAILURE, $event);
+        if ($this->dispatcher instanceof ContractsEventDispatcherInterface) {
+            $this->dispatcher->dispatch($event, Events::AUTHENTICATION_FAILURE);
+        } else {
+            $this->dispatcher->dispatch(Events::AUTHENTICATION_FAILURE, $event);
+        }
 
         return $event->getResponse();
     }

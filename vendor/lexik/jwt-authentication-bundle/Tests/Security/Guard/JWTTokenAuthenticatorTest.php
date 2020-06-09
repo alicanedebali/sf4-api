@@ -21,6 +21,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Tests\Stubs\User as AdvancedUserStub;
 use Lexik\Bundle\JWTAuthenticationBundle\TokenExtractor\TokenExtractorInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as ContractsEventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Exception\UsernameNotFoundException;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
@@ -138,12 +139,10 @@ class JWTTokenAuthenticatorTest extends TestCase
         }
     }
 
-    /**
-     * @expectedException        \InvalidArgumentException
-     * @expectedExceptionMessage must be an instance of "Lexik\Bundle\JWTAuthenticationBundle\Security\Authentication\Token\PreAuthenticationJWTUserToken".
-     */
     public function testGetUserWithInvalidFirstArg()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         (new JWTTokenAuthenticator(
             $this->getJWTManagerMock(),
             $this->getEventDispatcherMock(),
@@ -192,10 +191,7 @@ class JWTTokenAuthenticatorTest extends TestCase
         $jwtUserToken = new JWTUserToken($userRoles, $userStub, $rawToken, 'lexik');
 
         $dispatcher = $this->getEventDispatcherMock();
-        $dispatcher
-            ->expects($this->once())
-            ->method('dispatch')
-            ->with(Events::JWT_AUTHENTICATED, new JWTAuthenticatedEvent($payload, $jwtUserToken));
+        $this->expectEvent(Events::JWT_AUTHENTICATED, new JWTAuthenticatedEvent($payload, $jwtUserToken), $dispatcher);
 
         $authenticator = new JWTTokenAuthenticator(
             $this->getJWTManagerMock(null, 'sub'),
@@ -215,12 +211,11 @@ class JWTTokenAuthenticatorTest extends TestCase
         $this->assertEquals($jwtUserToken, $authenticator->createAuthenticatedToken($userStub, 'lexik'));
     }
 
-    /**
-     * @expectedException        \RuntimeException
-     * @expectedExceptionMessage Unable to return an authenticated token
-     */
     public function testCreateAuthenticatedTokenThrowsExceptionIfNotPreAuthenticatedToken()
     {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Unable to return an authenticated token');
+
         $userStub = new AdvancedUserStub('lexik', 'test');
 
         (new JWTTokenAuthenticator(
@@ -236,13 +231,7 @@ class JWTTokenAuthenticatorTest extends TestCase
         $expectedResponse = new JWTAuthenticationFailureResponse('Invalid JWT Token');
 
         $dispatcher = $this->getEventDispatcherMock();
-        $dispatcher
-            ->expects($this->once())
-            ->method('dispatch')
-            ->with(
-                Events::JWT_INVALID,
-                new JWTInvalidEvent($authException, $expectedResponse)
-            );
+        $this->expectEvent(Events::JWT_INVALID, new JWTInvalidEvent($authException, $expectedResponse), $dispatcher);
 
         $authenticator = new JWTTokenAuthenticator(
             $this->getJWTManagerMock(),
@@ -262,13 +251,7 @@ class JWTTokenAuthenticatorTest extends TestCase
         $failureResponse = new JWTAuthenticationFailureResponse($authException->getMessageKey());
 
         $dispatcher = $this->getEventDispatcherMock();
-        $dispatcher
-            ->expects($this->once())
-            ->method('dispatch')
-            ->with(
-                Events::JWT_NOT_FOUND,
-                new JWTNotFoundEvent($authException, $failureResponse)
-            );
+        $this->expectEvent(Events::JWT_NOT_FOUND, new JWTNotFoundEvent($authException, $failureResponse), $dispatcher);
 
         $authenticator = new JWTTokenAuthenticator(
             $this->getJWTManagerMock(),
@@ -363,5 +346,16 @@ class JWTTokenAuthenticatorTest extends TestCase
         return $this->getMockBuilder(UserProviderInterface::class)
             ->disableOriginalConstructor()
             ->getMock();
+    }
+
+    private function expectEvent($eventName, $event, $dispatcher)
+    {
+        if ($dispatcher instanceof ContractsEventDispatcherInterface) {
+            $dispatcher->expects($this->once())->method('dispatch')->with($event, $eventName);
+
+            return;
+        }
+
+        $dispatcher->expects($this->once())->method('dispatch')->with($eventName, $event);
     }
 }

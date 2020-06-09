@@ -20,8 +20,6 @@
 namespace Doctrine\ORM\Mapping\Driver;
 
 use Doctrine\Common\Inflector\Inflector;
-use Doctrine\Common\Persistence\Mapping\Driver\MappingDriver;
-use Doctrine\Common\Persistence\Mapping\ClassMetadata;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\SchemaException;
 use Doctrine\DBAL\Schema\Table;
@@ -29,6 +27,10 @@ use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\Persistence\Mapping\ClassMetadata;
+use Doctrine\Persistence\Mapping\Driver\MappingDriver;
+use function interface_exists;
+use function preg_replace;
 
 /**
  * The DatabaseDriver reverse engineers the mapping metadata from a database.
@@ -548,9 +550,11 @@ class DatabaseDriver implements MappingDriver
 
         // Replace _id if it is a foreignkey column
         if ($fk) {
-            $columnName = str_replace('_id', '', $columnName);
+            $columnName = preg_replace('/_id$/', '', $columnName);
         }
 
         return Inflector::camelize($columnName);
     }
 }
+
+interface_exists(ClassMetadata::class);

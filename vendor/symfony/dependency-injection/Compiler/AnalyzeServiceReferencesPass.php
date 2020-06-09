@@ -34,7 +34,6 @@ class AnalyzeServiceReferencesPass extends AbstractRecursivePass implements Repe
     private $onlyConstructorArguments;
     private $hasProxyDumper;
     private $lazy;
-    private $expressionLanguage;
     private $byConstructor;
     private $definitions;
     private $aliases;
@@ -78,7 +77,7 @@ class AnalyzeServiceReferencesPass extends AbstractRecursivePass implements Repe
         try {
             parent::process($container);
         } finally {
-            $this->aliases = $this->definitions = array();
+            $this->aliases = $this->definitions = [];
         }
     }
 

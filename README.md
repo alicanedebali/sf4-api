@@ -44,6 +44,20 @@ You can see all endpoints with this endpoint.
 `/api/doc`
 `/api/doc.json`
 
+#### User register
+
+Customers can sign up with this format at body.
+
+{"username":"user", "password":"userpw","email":"mail@mail.com"}
+
+#### Create product data
+
+You can create one dummy product data with this endpoint after login.
+
+`/api/product/create`
+
+
+
 
 
 

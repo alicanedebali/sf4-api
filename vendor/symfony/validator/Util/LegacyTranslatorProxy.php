@@ -22,15 +22,26 @@ class LegacyTranslatorProxy implements LegacyTranslatorInterface, TranslatorInte
 {
     private $translator;
 
-    public function __construct(TranslatorInterface $translator)
+    /**
+     * @param LegacyTranslatorInterface|TranslatorInterface $translator
+     */
+    public function __construct($translator)
     {
-        if (!$translator instanceof LocaleAwareInterface) {
+        if ($translator instanceof LegacyTranslatorInterface) {
+            // no-op
+        } elseif (!$translator instanceof TranslatorInterface) {
+            throw new \InvalidArgumentException(sprintf('The translator passed to "%s()" must implement "%s" or "%s".', __METHOD__, TranslatorInterface::class, LegacyTranslatorInterface::class));
+        } elseif (!$translator instanceof LocaleAwareInterface) {
             throw new \InvalidArgumentException(sprintf('The translator passed to "%s()" must implement "%s".', __METHOD__, LocaleAwareInterface::class));
         }
+
         $this->translator = $translator;
     }
 
-    public function getTranslator(): TranslatorInterface
+    /**
+     * @return LegacyTranslatorInterface|TranslatorInterface
+     */
+    public function getTranslator()
     {
         return $this->translator;
     }
@@ -54,7 +65,7 @@ class LegacyTranslatorProxy implements LegacyTranslatorInterface, TranslatorInte
     /**
      * {@inheritdoc}
      */
-    public function trans($id, array $parameters = array(), $domain = null, $locale = null)
+    public function trans($id, array $parameters = [], $domain = null, $locale = null)
     {
         return $this->translator->trans($id, $parameters, $domain, $locale);
     }
@@ -62,8 +73,8 @@ class LegacyTranslatorProxy implements LegacyTranslatorInterface, TranslatorInte
     /**
      * {@inheritdoc}
      */
-    public function transChoice($id, $number, array $parameters = array(), $domain = null, $locale = null)
+    public function transChoice($id, $number, array $parameters = [], $domain = null, $locale = null)
     {
-        return $this->translator->trans($id, array('%count%' => $number) + $parameters, $domain, $locale);
+        return $this->translator->trans($id, ['%count%' => $number] + $parameters, $domain, $locale);
     }
 }

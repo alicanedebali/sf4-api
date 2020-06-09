@@ -47,7 +47,7 @@ class RequireCommand extends BaseRequireCommand
                 $op->addPackage($package['name'], $package['version'] ?? '', $input->getOption('dev'));
             }
 
-            $unpacker = new Unpacker($this->getComposer());
+            $unpacker = new Unpacker($this->getComposer(), $this->resolver);
             $result = $unpacker->unpack($op);
             $io = $this->getIO();
             foreach ($result->getUnpacked() as $pkg) {
@@ -56,7 +56,7 @@ class RequireCommand extends BaseRequireCommand
 
             $input->setArgument('packages', $result->getRequired());
         } elseif ($input->getOption('unpack')) {
-            $this->getIO()->writeError('<error>--unpack is incompatible with the interactive mode.</error>');
+            $this->getIO()->writeError('<error>--unpack is incompatible with the interactive mode.</>');
 
             return 1;
         }
